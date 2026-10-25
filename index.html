@@ -1,1 +1,600 @@
-<h1>Welcome to My Website</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure 1-on-1 Encrypted Chat</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --warning-color: #eab308;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .user-tag {
+            background: rgba(99, 102, 241, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+            display: inline-block;
+        }
+
+        .section {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-top: 5px;
+        }
+
+        .status-active { background: rgba(34, 197, 94, 0.2); color: var(--success-color); }
+        .status-busy { background: rgba(234, 179, 8, 0.2); color: var(--warning-color); }
+        .status-offline { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-active { background: var(--success-color); }
+        .dot-busy { background: var(--warning-color); }
+        .dot-offline { background: var(--danger-color); }
+
+        /* Chat Layout */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 450px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .msg-sent {
+            align-self: flex-end;
+            background: var(--accent-color);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-received {
+            align-self: flex-start;
+            background: var(--border-color);
+            color: white;
+            border-bottom-left-radius: 2px;
+        }
+
+        .file-card {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed var(--accent-color);
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .chat-input-bar {
+            padding: 10px 15px;
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chat-input-bar input[type="text"] {
+            flex: 1;
+        }
+
+        .file-btn {
+            background: var(--border-color);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Modal Viewer */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .timer-badge {
+            color: var(--warning-color);
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        #pdfCanvas {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 8px;
+            margin-top: 10px;
+            background: white;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div class="container">
+        <header>
+            <h1 id="headerTitle">🔒 1-on-1 Secure Chat</h1>
+            <div id="userCodeTag" class="user-tag" style="display:none;"></div>
+        </header>
+
+        <!-- Auth Section -->
+        <div id="authSection" class="section">
+            <div class="form-group">
+                <label>Create / Login with User Code (Max 10 Chars)</label>
+                <input type="text" id="loginIdInput" maxlength="10" placeholder="e.g. ANKIT4140">
+            </div>
+            <button class="btn" onclick="loginUser()">Enter / Create Code</button>
+        </div>
+
+        <!-- Search & Connect Section -->
+        <div id="searchSection" class="section" style="display: none;">
+            <div class="form-group">
+                <label>Search User Code to Connect</label>
+                <input type="text" id="searchIdInput" maxlength="10" placeholder="Enter target User Code">
+            </div>
+            <button class="btn" onclick="searchUser()">Search Status</button>
+
+            <div id="searchResult" style="margin-top: 15px; display: none;">
+                <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-weight: 600;" id="resultId"></div>
+                    <div id="resultStatus"></div>
+                    <button class="btn" id="connectBtn" style="margin-top: 10px; display: none;" onclick="connectToPeer()">Start Encrypted Chat</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Room -->
+        <div id="chatSection" class="chat-container" style="display: none;">
+            <div style="padding: 10px 15px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <span id="chatPeerId" style="font-size: 0.9rem; font-weight: 600;"></span>
+                <button class="btn btn-danger" style="width: auto; padding: 5px 12px; font-size: 0.8rem;" onclick="endChat()">End Chat</button>
+            </div>
+            <div class="chat-messages" id="messageList">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 20px 0;">
+                    🔒 All text messages auto-delete after 5 mins.<br>Protected files auto-destruct after 30s.
+                </div>
+            </div>
+            <div class="chat-input-bar">
+                <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)">
+                <button class="file-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+                <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendTextMessage()">
+                <button class="btn" style="width: auto; padding: 10px 15px;" onclick="sendTextMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Protected PDF Viewer Modal -->
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <div class="timer-badge">⏱️ Self-Destructing in: <span id="timerSec">30</span>s</div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Protected One-Time View PDF</p>
+            <div id="pdfCanvasContainer"></div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passModal" class="modal">
+        <div class="modal-content">
+            <h3>🔒 Protected PDF File</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 10px 0;">Enter your User Code to unlock this file:</p>
+            <input type="text" id="unlockPassInput" placeholder="Your User Code" style="margin-bottom: 10px;">
+            <button class="btn" onclick="unlockFile()">Unlock & View</button>
+        </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        let peer = null;
+        let conn = null;
+        let myId = "";
+        let targetId = "";
+        let isBusy = false;
+        let currentFilePayload = null;
+        let timerInterval = null;
+
+        // Auto login if stored
+        window.onload = () => {
+            const saved = localStorage.getItem('userCode');
+            if (saved) {
+                document.getElementById('loginIdInput').value = saved;
+                loginUser();
+            }
+        };
+
+        function loginUser() {
+            const val = document.getElementById('loginIdInput').value.trim().toUpperCase();
+            if (!val || val.length > 10) {
+                alert("Please enter a valid User Code (Max 10 chars)");
+                return;
+            }
+            myId = val;
+            localStorage.setItem('userCode', myId);
+
+            document.getElementById('headerTitle').innerText = "Ankit Bhai Website Welcome You 😃";
+            document.getElementById('userCodeTag').style.display = "inline-block";
+            document.getElementById('userCodeTag').innerText = `User Code: ${myId}`;
+            document.getElementById('authSection').style.display = "none";
+            document.getElementById('searchSection').style.display = "block";
+
+            initPeer();
+        }
+
+        function initPeer() {
+            peer = new Peer(myId, { debug: 1 });
+
+            peer.on('open', (id) => {
+                console.log("Connected as:", id);
+            });
+
+            peer.on('connection', (c) => {
+                if (isBusy) {
+                    c.send({ type: 'BUSY_REJECT' });
+                    setTimeout(() => c.close(), 500);
+                    return;
+                }
+                conn = c;
+                setupConnection();
+                startChatUI(c.peer);
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    alert("This User Code is currently active online elsewhere.");
+                }
+            });
+        }
+
+        function searchUser() {
+            const query = document.getElementById('searchIdInput').value.trim().toUpperCase();
+            if (!query) return;
+            targetId = query;
+
+            const resDiv = document.getElementById('searchResult');
+            const resId = document.getElementById('resultId');
+            const resStatus = document.getElementById('resultStatus');
+            const connBtn = document.getElementById('connectBtn');
+
+            resDiv.style.display = "block";
+            resId.innerText = `User Code: ${query}`;
+            resStatus.innerHTML = `<span class="status-badge status-offline"><span class="dot dot-offline"></span> Checking Status...</span>`;
+            connBtn.style.display = "none";
+
+            // Ping target user via temporary connection test
+            const tempConn = peer.connect(query, { reliable: true });
+
+            let responded = false;
+            tempConn.on('open', () => {
+                responded = true;
+                resStatus.innerHTML = `<span class="status-badge status-active"><span class="dot dot-active"></span> Active / Online</span>`;
+                connBtn.style.display = "block";
+                tempConn.close();
+            });
+
+            setTimeout(() => {
+                if (!responded) {
+                    resStatus.innerHTML = `<span class="status-badge status-offline"><span class="dot dot-offline"></span> Inactive / Offline</span>`;
+                }
+            }, 2500);
+        }
+
+        function connectToPeer() {
+            conn = peer.connect(targetId, { reliable: true });
+            setupConnection();
+            startChatUI(targetId);
+        }
+
+        function setupConnection() {
+            isBusy = true;
+            conn.on('data', (data) => {
+                if (data.type === 'BUSY_REJECT') {
+                    alert("User is currently busy in another chat!");
+                    endChat();
+                } else if (data.type === 'TEXT') {
+                    appendMessage(data.text, 'received', 300); // 5 mins auto delete
+                } else if (data.type === 'LOCKED_FILE') {
+                    appendFileMessage(data, 'received');
+                }
+            });
+
+            conn.on('close', () => {
+                alert("Chat disconnected.");
+                endChat();
+            });
+        }
+
+        function startChatUI(peerCode) {
+            document.getElementById('searchSection').style.display = "none";
+            document.getElementById('chatSection').style.display = "flex";
+            document.getElementById('chatPeerId').innerText = `Chatting with: ${peerCode}`;
+        }
+
+        function endChat() {
+            if (conn) conn.close();
+            conn = null;
+            isBusy = false;
+            document.getElementById('chatSection').style.display = "none";
+            document.getElementById('searchSection').style.display = "block";
+        }
+
+        function sendTextMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text || !conn) return;
+
+            conn.send({ type: 'TEXT', text: text });
+            appendMessage(text, 'sent', 300);
+            input.value = "";
+        }
+
+        function appendMessage(text, type, autoDeleteSec) {
+            const list = document.getElementById('messageList');
+            const msgEl = document.createElement('div');
+            msgEl.className = `msg msg-${type}`;
+            msgEl.innerText = text;
+            list.appendChild(msgEl);
+            list.scrollTop = list.scrollHeight;
+
+            if (autoDeleteSec) {
+                setTimeout(() => {
+                    msgEl.remove();
+                }, autoDeleteSec * 1000);
+            }
+        }
+
+        // File Handler & Lock PDF
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const imgData = evt.target.result;
+                
+                // Create PDF wrapper
+                const doc = new jsPDF();
+                doc.text("Protected One-Time Secure Document", 10, 10);
+                doc.text(`Recipient Lock ID: ${targetId}`, 10, 20);
+
+                if (file.type.startsWith('image/')) {
+                    doc.addImage(imgData, 'JPEG', 15, 30, 180, 160);
+                } else {
+                    doc.text(`File Name: ${file.name}`, 15, 40);
+                    doc.text("Content embedded safely.", 15, 50);
+                }
+
+                const pdfBase64 = doc.output('datauristring');
+                
+                const payload = {
+                    type: 'LOCKED_FILE',
+                    pdfData: pdfBase64,
+                    fileName: file.name,
+                    targetLock: targetId
+                };
+
+                conn.send(payload);
+                appendMessage(`📁 Sent Locked PDF File: ${file.name}`, 'sent', 300);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function appendFileMessage(payload, type) {
+            const list = document.getElementById('messageList');
+            const msgEl = document.createElement('div');
+            msgEl.className = `msg msg-${type}`;
+            
+            const card = document.createElement('div');
+            card.className = "file-card";
+            card.innerHTML = `
+                <div>🔒 <b>${payload.fileName} (PDF Encrypted)</b></div>
+                <button class="btn" style="margin-top:5px; padding:6px; font-size:0.8rem;" onclick="promptUnlock('${encodeURIComponent(JSON.stringify(payload))}', this)">Unlock File</button>
+            `;
+            msgEl.appendChild(card);
+            list.appendChild(msgEl);
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function promptUnlock(payloadStr, btnEl) {
+            currentFilePayload = JSON.parse(decodeURIComponent(payloadStr));
+            currentFilePayload.btnEl = btnEl;
+            document.getElementById('passModal').style.display = "flex";
+        }
+
+        function unlockFile() {
+            const pass = document.getElementById('unlockPassInput').value.trim().toUpperCase();
+            if (pass !== myId) {
+                alert("Incorrect User Code! File access denied.");
+                return;
+            }
+
+            document.getElementById('passModal').style.display = "none";
+            document.getElementById('unlockPassInput').value = "";
+
+            // Disable button (One-time view)
+            if (currentFilePayload.btnEl) {
+                currentFilePayload.btnEl.disabled = true;
+                currentFilePayload.btnEl.innerText = "Opened (Expired)";
+            }
+
+            showProtectedPDF(currentFilePayload.pdfData);
+        }
+
+        function showProtectedPDF(pdfData) {
+            const modal = document.getElementById('pdfModal');
+            const container = document.getElementById('pdfCanvasContainer');
+            const timerEl = document.getElementById('timerSec');
+            
+            container.innerHTML = `<iframe src="${pdfData}" style="width:100%; height:300px; border:none;"></iframe>`;
+            modal.style.display = "flex";
+
+            let timeLeft = 30;
+            timerEl.innerText = timeLeft;
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    modal.style.display = "none";
+                    container.innerHTML = "";
+                    alert("30 Seconds expired! File self-destructed.");
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
+
